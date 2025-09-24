@@ -17,6 +17,10 @@ def play():
 
     clock = pygame.time.Clock()
 
+    board_size = 9
+    size_on_board = 75
+    start_board_pixel_X = 187
+    start_board_pixel_Y = 176
 
 
     pygame.display.set_caption("Play")
@@ -28,7 +32,7 @@ def play():
     mouse_click = False
 
     # wczytywanie planszy
-    image_board_7x7 = pygame.image.load("Grafiki\\plansza_9x9.png").convert()
+    image_board = pygame.image.load("Grafiki\\plansza_9x9.png").convert()
     image_win = pygame.image.load("Grafiki\\Wygrana.png").convert()
     font = pygame.font.Font(None, size=50)
     font_win = pygame.font.Font("Czcionki\\ByteBounce.ttf", size=80)
@@ -68,21 +72,15 @@ def play():
     fruits_dict_img_BIGer = {
         0 : False
     }
-    fruits_dict_img_red = {
-        0 : False
-    }
+
     for key, value in fruits_dict.items():
         image_path = f"Grafiki/Owoce/{value}.png"
         fruits_dict_img[key] = pygame.image.load(image_path).convert_alpha()
-        fruits_dict_img_BIGer[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*6 , fruits_dict_img[key].get_height()*6))
-        fruits_dict_img[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*5 , fruits_dict_img[key].get_height()*5))
-
-        new_img = fruits_dict_img[key].copy()
-        new_img.fill((255, 150, 150, 255), special_flags=pygame.BLEND_RGBA_MULT)
-        fruits_dict_img_red[key] = new_img
+        fruits_dict_img_BIGer[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*4 , fruits_dict_img[key].get_height()*5))
+        fruits_dict_img[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*3 , fruits_dict_img[key].get_height()*4))
 
     # inicjalizacja gry owoce
-    fruits = owocki.Fruits()
+    fruits = owocki.Fruits(size=board_size)
 
     print(fruits.board)
 
@@ -95,39 +93,33 @@ def play():
     print(best_famili_fruit_BF)
 
     #wyliczanie która to kratka
-    board_x_start = 141
-    board_x_end = 883
-    board_y_start = 194
-    board_y_end = 919
+    board_x_starta = 174
+    board_x_enda = 848
+    board_y_starta = 174
+    board_y_enda = 844
 
-    cols = 7
-    rows = 7
+    cols = board_size
+    rows = board_size
 
-    square_width = (board_x_end - board_x_start) / cols
-    square_height = (board_y_end - board_y_start) / rows
     square = False
-
-
-
-
 
     def get_square_index(x_click, y_click):
         size = screen.get_size()
 
-        board_x_start = 141 * (size[0]/BASE_W)
-        board_x_end = 883 * (size[0]/BASE_W)
-        board_y_start = 194 * (size[1]/BASE_H)
-        board_y_end = 919 * (size[1]/BASE_H)
+        board_x_start = board_x_starta * (size[0]/BASE_W)
+        board_x_end = board_x_enda * (size[0]/BASE_W)
+        board_y_start = board_y_starta * (size[1]/BASE_H)
+        board_y_end = board_y_enda * (size[1]/BASE_H)
 
-        cols = 7
-        rows = 7
+        cols = board_size
+        rows = board_size
         square_width = (board_x_end - board_x_start) / cols
         square_height = (board_y_end - board_y_start) / rows
 
         if board_x_start <= x_click <= board_x_end and board_y_start <= y_click <= board_y_end:
             col = int((x_click - board_x_start) / square_width)
             row = int((y_click - board_y_start) / square_height)
-            if row < 7 and col < 7:
+            if row < board_size and col < board_size:
                 return row, col
             else:
                 return None
@@ -146,7 +138,7 @@ def play():
 
 
     while running:
-        base_surface.blit(image_board_7x7, (0,0))
+        base_surface.blit(image_board, (0,0))
 
         if not init_time:
             if blink > 190:
@@ -173,27 +165,27 @@ def play():
 
             x = 0
             y = 0
-            for x in range(0,7): 
-                for y in range(0,7):
+            for x in range(0,board_size): 
+                for y in range(0,board_size):
                     if fruits.board[y][x]:
                         if [y,x] in mpos_on_famili_fruit:
-                            base_surface.blit(fruits_dict_img_BIGer[fruits.board[y][x]], (150+105*x,203+102*y))
+                            base_surface.blit(fruits_dict_img_BIGer[fruits.board[y][x]], (start_board_pixel_X-7+size_on_board*x,start_board_pixel_Y-7+size_on_board*y))
                         # elif [y,x] in optimal_famili_fruits:
                         #     base_surface.blit(fruits_dict_img_red[fruits.board[y][x]], (150+105*x,203+102*y))
                         elif [y,x] in best_famili_fruit_BF and len(best_famili_fruit_BF) > 1: 
                             if blink < blink_limit/2:
                                 alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
                                 alfa_fuits.set_alpha(max(0, 255 - (blink)))
-                                base_surface.blit(alfa_fuits, (155+105*x,208+102*y))
+                                base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
                             elif blink >= blink_limit/2 and len(best_famili_fruit_BF) > 1:
                                 alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
                                 alfa_fuits.set_alpha(max(0, 255 - blink_limit + (blink)))
-                                base_surface.blit(alfa_fuits, (155+105*x,208+102*y))
+                                base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
                                 if blink >= blink_limit:
                                     blink = 0
 
                         else:
-                            base_surface.blit(fruits_dict_img[fruits.board[y][x]], (155+105*x,208+102*y))
+                            base_surface.blit(fruits_dict_img[fruits.board[y][x]], (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
 
         blink += blink_speed
 
