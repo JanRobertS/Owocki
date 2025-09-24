@@ -129,7 +129,6 @@ def _gravity(_family_fruit, _board): # funkcja, która usuwa całe spójne kompo
 
 @njit
 def gravity_numba(family_fruit, board):
-    n_rows, n_cols = board.shape
     for i in range(family_fruit.shape[0]):
         row = family_fruit[i, 0]
         col = family_fruit[i, 1]
