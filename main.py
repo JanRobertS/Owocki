@@ -2,6 +2,7 @@ import pygame
 import Gra_7x7_owocki as owocki
 import proba_optymalizacji_optymalizacji as optymalizacja
 import numpy as np
+import multiprocessing as mp
 
 from Button import Button
 
@@ -96,10 +97,8 @@ def play(board = plansza, best_opti = None):
     else:
         brute_forse_turn = len(best_opti)
         best_xy_BF = best_opti.pop(0)
-        print("optymalizacja:",best_xy_BF)
 
     best_famili_fruit_BF =  fruits.search_neighbors(best_xy_BF)
-    print(best_famili_fruit_BF)
 
     #wyliczanie która to kratka
     board_x_starta = 174
@@ -219,8 +218,6 @@ def play(board = plansza, best_opti = None):
                     else:
                         best_xy_BF = best_opti.pop(0)
                     best_famili_fruit_BF =  fruits.search_neighbors(best_xy_BF)
-                    print("optymalizacja:",best_xy_BF)
-                    print(best_famili_fruit_BF)
 
                 if fruits.finished:
                     win_sound.play()
@@ -236,17 +233,17 @@ def play(board = plansza, best_opti = None):
     pygame.quit()
 
 def optimalization(board):
-    board = np.array([
-    [8, 9, 2, 1, 4, 9, 2, 9, 6],
-    [5, 7, 4, 8, 9, 7, 4, 5, 5],
-    [7, 7, 5, 2, 9, 2, 5, 2, 7],
-    [8, 5, 9, 6, 9, 6, 5, 9, 6],
-    [8, 5, 5, 6, 9, 3, 4, 9, 9],
-    [7, 1, 4, 9, 9, 8, 8, 1, 5],
-    [5, 1, 4, 4, 4, 4, 6, 5, 9],
-    [9, 1, 2, 3, 8, 4, 1, 3, 6],
-    [8, 8, 8, 8, 3, 5, 1, 5, 3]
-    ])
+    # board = np.array([
+    # [8, 9, 2, 1, 4, 9, 2, 9, 6],
+    # [5, 7, 4, 8, 9, 7, 4, 5, 5],
+    # [7, 7, 5, 2, 9, 2, 5, 2, 7],
+    # [8, 5, 9, 6, 9, 6, 5, 9, 6],
+    # [8, 5, 5, 6, 9, 3, 4, 9, 9],
+    # [7, 1, 4, 9, 9, 8, 8, 1, 5],
+    # [5, 1, 4, 4, 4, 4, 6, 5, 9],
+    # [9, 1, 2, 3, 8, 4, 1, 3, 6],
+    # [8, 8, 8, 8, 3, 5, 1, 5, 3]
+    # ])
     
     def draw_progress_bar(surface, x, y, width, height, progress):
         # progress w zakresie 0.0–1.0
@@ -264,25 +261,32 @@ def optimalization(board):
     running = True
     progress = 0.0
 
-    # wywołaj find_optimal jako generator
-    gen = optymalizacja.find_optimal_generator(np.copy(board), [], step, top)
+    queue = mp.Queue()
+
+    p = mp.Process(target=optymalizacja.find_optimal_worker,
+                   args=(np.copy(board), [], step, top, queue))
+    p.start()
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-        try:
-            iteration, best = next(gen)   # <- find_optimal musi yieldować (iteracja, wynik)
-            print("Iteracja:",iteration)
-            progress = iteration / 30  # tu zamiast 100 możesz dać np. max_iter
-        except StopIteration:
-            running = False
+        while not queue.empty():
+            msg = queue.get()
+            if msg[0] == "DONE":
+                best = msg[1]
+                running = False
+            else:
+                iteration = msg[1]
+                progress = min(iteration /30, 1.0)
 
         screen.fill((30, 30, 30))
         draw_progress_bar(screen, 50, 60, 500, 30, min(progress, 1.0))
         pygame.display.flip()
         clock.tick(30)
+
+    p.join()
 
     rezultat1 = best[1]
     rezultat2 = [(np.int64(x), np.int64(y)) for x, y in rezultat1]

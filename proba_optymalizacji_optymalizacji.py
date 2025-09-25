@@ -392,16 +392,16 @@ def brute_force(_board, _resultat): #algorytm BruteForce, który "klika" zawsze 
 
     return _resultat, len(_resultat)
 
-def find_optimal_generator(_board, _resultat, step: int = 5, top: int = 5):
+def find_optimal_worker(_board, _resultat, step, top, queue):
     _fruits = [(_board, _resultat)]
     _i = 0
     _j = 0
     _k = 0
 
-    _pool = mp.Pool(processes=mp.cpu_count())
-    finished = False
+    _pool = mp.Pool(processes=mp.cpu_count()-3)
+    _finished = False
 
-    while not finished:
+    while not _finished:
         if _i > 5:
             _j = 1
 
@@ -413,34 +413,29 @@ def find_optimal_generator(_board, _resultat, step: int = 5, top: int = 5):
             res_list = _pool.starmap(process_board, [(_b, _r) for _b, _r in _fruits])
 
             _fruits2 = []
-            finished = False
 
             for fruits_chunk, _finished in res_list:
                 if _finished:
-                    finished = True
-                    # zamiast return => yield
-                    yield _i, fruits_chunk[0]
+                    queue.put(("DONE", fruits_chunk[0]))
                     _pool.close()
                     _pool.join()
                     return
+
                 _fruits2.extend(fruits_chunk)
 
             _fruits = _fruits2
+            queue.put((None,_k))
 
         # Liczymy oceny dla wszystkich plansz
         _tabel_score = _pool.map(score_board, [_b for _b, _ in _fruits])
-
         _tabel_score = np.array(_tabel_score)
-        _top5_index = np.argpartition(_tabel_score, -top)[-top:]
+        _top_index = np.argpartition(_tabel_score, -top)[-top:]
 
         # Zachowujemy tylko najlepsze plansze
-        _fruits = [_fruits[_idx] for _idx in _top5_index]
+        _fruits = [_fruits[_idx] for _idx in _top_index]
 
         _end = time.time()
-
         # generator oddaje aktualny stan
-        yield _k, _fruits
-
         _i += 1
 
 
