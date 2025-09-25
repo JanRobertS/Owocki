@@ -8,7 +8,19 @@ from Button import Button
 #główne inicjalizowanie
 pygame.init()
 
-def play(board = None, best_opti = None):
+plansza = np.array([
+    [8, 9, 2, 1, 4, 9, 2, 9, 6],
+    [5, 7, 4, 8, 9, 7, 4, 5, 5],
+    [7, 7, 5, 2, 9, 2, 5, 2, 7],
+    [8, 5, 9, 6, 9, 6, 5, 9, 6],
+    [8, 5, 5, 6, 9, 3, 4, 9, 9],
+    [7, 1, 4, 9, 9, 8, 8, 1, 5],
+    [5, 1, 4, 4, 4, 4, 6, 5, 9],
+    [9, 1, 2, 3, 8, 4, 1, 3, 6],
+    [8, 8, 8, 8, 3, 5, 1, 5, 3]
+])
+
+def play(board = plansza, best_opti = None):
     BASE_W, BASE_H = 1024, 1024
 
     base_surface = pygame.Surface((BASE_W, BASE_H))
@@ -75,6 +87,7 @@ def play(board = None, best_opti = None):
     # inicjalizacja gry owoce
     board_size = 9
     fruits = owocki.Fruits(board=board, size=board_size)
+    print(fruits.board)
 
     if not best_opti:
         optymalization = owocki.Optimalization(fruits.board.copy())
@@ -169,7 +182,7 @@ def play(board = None, best_opti = None):
                                     alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
                                     alfa_fuits.set_alpha(max(0, 255 - (blink)))
                                     base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
-                                elif blink >= blink_limit/2 and len(best_famili_fruit_BF) > 1:
+                                elif blink >= blink_limit/2:
                                     alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
                                     alfa_fuits.set_alpha(max(0, 255 - blink_limit + (blink)))
                                     base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
@@ -223,6 +236,18 @@ def play(board = None, best_opti = None):
     pygame.quit()
 
 def optimalization(board):
+    board = np.array([
+    [8, 9, 2, 1, 4, 9, 2, 9, 6],
+    [5, 7, 4, 8, 9, 7, 4, 5, 5],
+    [7, 7, 5, 2, 9, 2, 5, 2, 7],
+    [8, 5, 9, 6, 9, 6, 5, 9, 6],
+    [8, 5, 5, 6, 9, 3, 4, 9, 9],
+    [7, 1, 4, 9, 9, 8, 8, 1, 5],
+    [5, 1, 4, 4, 4, 4, 6, 5, 9],
+    [9, 1, 2, 3, 8, 4, 1, 3, 6],
+    [8, 8, 8, 8, 3, 5, 1, 5, 3]
+    ])
+    
     def draw_progress_bar(surface, x, y, width, height, progress):
         # progress w zakresie 0.0–1.0
         pygame.draw.rect(surface, (200, 200, 200), (x, y, width, height), 2)  # ramka
@@ -263,7 +288,6 @@ def optimalization(board):
     rezultat2 = [(np.int64(x), np.int64(y)) for x, y in rezultat1]
     # po zakończeniu pokaż normalną grę
     play(board=board, best_opti=rezultat2)
-
 
 def optimum(board_size = 9):
 
@@ -477,7 +501,7 @@ def optimum(board_size = 9):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if AKCEPT_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    optimalization(board=board)
+                    optimalization(board=board) #TODO ZAMIENIĆ NA BOARD "TEST"
                 if RESET_BUTTON.checkForInput(MENU_MOUSE_POS):
                     board = np.zeros((board_size, board_size))
                     clicked_fruit = None
@@ -561,6 +585,3 @@ def menu():
 if __name__ == "__main__":
     menu()
     pygame.quit()
-
-
-
