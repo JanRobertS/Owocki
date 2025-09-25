@@ -392,6 +392,57 @@ def brute_force(_board, _resultat): #algorytm BruteForce, który "klika" zawsze 
 
     return _resultat, len(_resultat)
 
+def find_optimal_generator(_board, _resultat, step: int = 5, top: int = 5):
+    _fruits = [(_board, _resultat)]
+    _i = 0
+    _j = 0
+    _k = 0
+
+    _pool = mp.Pool(processes=mp.cpu_count())
+    finished = False
+
+    while not finished:
+        if _i > 5:
+            _j = 1
+
+        _start = time.time()
+
+        # Rozwijamy wszystkie możliwe plansze przez kilka kroków
+        for _ in range(step + _j):
+            _k+=1
+            res_list = _pool.starmap(process_board, [(_b, _r) for _b, _r in _fruits])
+
+            _fruits2 = []
+            finished = False
+
+            for fruits_chunk, _finished in res_list:
+                if _finished:
+                    finished = True
+                    # zamiast return => yield
+                    yield _i, fruits_chunk[0]
+                    _pool.close()
+                    _pool.join()
+                    return
+                _fruits2.extend(fruits_chunk)
+
+            _fruits = _fruits2
+
+        # Liczymy oceny dla wszystkich plansz
+        _tabel_score = _pool.map(score_board, [_b for _b, _ in _fruits])
+
+        _tabel_score = np.array(_tabel_score)
+        _top5_index = np.argpartition(_tabel_score, -top)[-top:]
+
+        # Zachowujemy tylko najlepsze plansze
+        _fruits = [_fruits[_idx] for _idx in _top5_index]
+
+        _end = time.time()
+
+        # generator oddaje aktualny stan
+        yield _k, _fruits
+
+        _i += 1
+
 
 def find_optimal(_board, _resultat, step: int = 5, top: int = 5):
     _fruits = [(_board, _resultat)]
@@ -410,7 +461,6 @@ def find_optimal(_board, _resultat, step: int = 5, top: int = 5):
         if _i > 5:
             _j = 1 
 
-        print("Iteracja:", _i)
         _start = time.time()
 
         # Rozwijamy wszystkie możliwe plansze przez kilka kroków

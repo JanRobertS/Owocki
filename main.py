@@ -8,7 +8,7 @@ from Button import Button
 #główne inicjalizowanie
 pygame.init()
 
-def play(board = None):
+def play(board = None, best_opti = None):
     BASE_W, BASE_H = 1024, 1024
 
     base_surface = pygame.Surface((BASE_W, BASE_H))
@@ -76,10 +76,17 @@ def play(board = None):
     board_size = 9
     fruits = owocki.Fruits(board=board, size=board_size)
 
-    optymalization = owocki.Optimalization(fruits.board.copy())
-    brute_forse_turn = optymalization.brute_force_turn
-    best_xy_BF = optymalization.best_move_brute_forse(fruits)
+    if not best_opti:
+        optymalization = owocki.Optimalization(fruits.board.copy())
+        brute_forse_turn = optymalization.brute_force_turn
+        best_xy_BF = optymalization.best_move_brute_forse(fruits)
+    else:
+        brute_forse_turn = len(best_opti)
+        best_xy_BF = best_opti.pop(0)
+        print("optymalizacja:",best_xy_BF)
+
     best_famili_fruit_BF =  fruits.search_neighbors(best_xy_BF)
+    print(best_famili_fruit_BF)
 
     #wyliczanie która to kratka
     board_x_starta = 174
@@ -156,17 +163,18 @@ def play(board = None):
                     if fruits.board[y][x]:
                         if [y,x] in mpos_on_famili_fruit:
                             base_surface.blit(fruits_dict_img_BIGer[fruits.board[y][x]], (start_board_pixel_X-7+size_on_board*x,start_board_pixel_Y-7+size_on_board*y))
-                        elif [y,x] in best_famili_fruit_BF and len(best_famili_fruit_BF) > 1: 
-                            if blink < blink_limit/2:
-                                alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
-                                alfa_fuits.set_alpha(max(0, 255 - (blink)))
-                                base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
-                            elif blink >= blink_limit/2 and len(best_famili_fruit_BF) > 1:
-                                alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
-                                alfa_fuits.set_alpha(max(0, 255 - blink_limit + (blink)))
-                                base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
-                                if blink >= blink_limit:
-                                    blink = 0
+                        elif [y,x] in best_famili_fruit_BF : 
+                            if len(best_famili_fruit_BF) > 1 or best_opti:
+                                if blink < blink_limit/2:
+                                    alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
+                                    alfa_fuits.set_alpha(max(0, 255 - (blink)))
+                                    base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
+                                elif blink >= blink_limit/2 and len(best_famili_fruit_BF) > 1:
+                                    alfa_fuits = fruits_dict_img[fruits.board[y][x]].copy()
+                                    alfa_fuits.set_alpha(max(0, 255 - blink_limit + (blink)))
+                                    base_surface.blit(alfa_fuits, (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
+                                    if blink >= blink_limit:
+                                        blink = 0
 
                         else:
                             base_surface.blit(fruits_dict_img[fruits.board[y][x]], (start_board_pixel_X+size_on_board*x,start_board_pixel_Y+size_on_board*y))
@@ -192,8 +200,14 @@ def play(board = None):
                 pop_sound.play()
                 square = False
 
-                best_xy_BF = optymalization.best_move_brute_forse(fruits)
-                best_famili_fruit_BF =  fruits.search_neighbors(best_xy_BF)
+                if not fruits.finished:
+                    if not best_opti:
+                        best_xy_BF = optymalization.best_move_brute_forse(fruits)
+                    else:
+                        best_xy_BF = best_opti.pop(0)
+                    best_famili_fruit_BF =  fruits.search_neighbors(best_xy_BF)
+                    print("optymalizacja:",best_xy_BF)
+                    print(best_famili_fruit_BF)
 
                 if fruits.finished:
                     win_sound.play()
@@ -207,6 +221,49 @@ def play(board = None):
 
 
     pygame.quit()
+
+def optimalization(board):
+    def draw_progress_bar(surface, x, y, width, height, progress):
+        # progress w zakresie 0.0–1.0
+        pygame.draw.rect(surface, (200, 200, 200), (x, y, width, height), 2)  # ramka
+        inner_width = int(width * progress)
+        pygame.draw.rect(surface, (50, 200, 50), (x, y, inner_width, height))  # wypełnienie
+
+    step = 3
+    top = 3
+
+    BASE_W, BASE_H = 600, 150
+    screen = pygame.display.set_mode((BASE_W, BASE_H))
+    clock = pygame.time.Clock()
+
+    running = True
+    progress = 0.0
+
+    # wywołaj find_optimal jako generator
+    gen = optymalizacja.find_optimal_generator(np.copy(board), [], step, top)
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        try:
+            iteration, best = next(gen)   # <- find_optimal musi yieldować (iteracja, wynik)
+            print("Iteracja:",iteration)
+            progress = iteration / 30  # tu zamiast 100 możesz dać np. max_iter
+        except StopIteration:
+            running = False
+
+        screen.fill((30, 30, 30))
+        draw_progress_bar(screen, 50, 60, 500, 30, min(progress, 1.0))
+        pygame.display.flip()
+        clock.tick(30)
+
+    rezultat1 = best[1]
+    rezultat2 = [(np.int64(x), np.int64(y)) for x, y in rezultat1]
+    # po zakończeniu pokaż normalną grę
+    play(board=board, best_opti=rezultat2)
+
 
 def optimum(board_size = 9):
 
@@ -257,29 +314,18 @@ def optimum(board_size = 9):
         0 : False
     }
 
-    fruits_dict_img_new_BIGer = {
-        0 : False
-    }
-
-    fruits_dict_img_new = {
-        0 : False
-    }
-
     for key, value in fruits_dict.items():
         image_path = f"Grafiki/Owoce/{value}.png"
         fruits_dict_img[key] = pygame.image.load(image_path).convert_alpha()
 
-        fruits_dict_img_new_BIGer[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*5 , fruits_dict_img[key].get_height()*5))
-        fruits_dict_img_new[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*4 , fruits_dict_img[key].get_height()*4))
-
-        fruits_dict_img_BIGer[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*4 , fruits_dict_img[key].get_height()*5))
-        fruits_dict_img[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*3 , fruits_dict_img[key].get_height()*4))
+        fruits_dict_img_BIGer[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*5 , fruits_dict_img[key].get_height()*5))
+        fruits_dict_img[key] = pygame.transform.scale(fruits_dict_img[key], (fruits_dict_img[key].get_width()*4 , fruits_dict_img[key].get_height()*4))
 
 
 
 
     size_on_board = 75
-    start_board_pixel_X = 187
+    start_board_pixel_X = 179
     start_board_pixel_Y = 176
 
     #wyliczanie która to kratka
@@ -290,6 +336,14 @@ def optimum(board_size = 9):
 
     square = False
     click = False
+
+    AKCEPT_BUTTON = Button(image=None, pos=(525,930), text_input="AKCEPT",
+                        font=pygame.font.Font("Czcionki\\ByteBounce.ttf", size=175),
+                        base_color="#d7fcd4", hovering_color="White") 
+    
+    RESET_BUTTON = Button(image=None, pos=(935,510), text_input="RESET",
+                        font=pygame.font.Font("Czcionki\\ByteBounce.ttf", size=50),
+                        base_color="#d7fcd4", hovering_color="White") 
 
     def get_square_index(x_click, y_click):
         size = screen.get_size()
@@ -358,10 +412,11 @@ def optimum(board_size = 9):
 
         MENU_MOUSE_POS = pygame.mouse.get_pos()
         mpos_on_fruit = [get_square_index_new_fruits(MENU_MOUSE_POS[0],MENU_MOUSE_POS[1])]
-        if mpos_on_fruit:
-            print(mpos_on_fruit)
 
-        
+
+        for button in [AKCEPT_BUTTON, RESET_BUTTON]:
+            button.changeColor(MENU_MOUSE_POS)
+            button.update(base_surface)
 
         x = 0
         y = 0 
@@ -369,15 +424,15 @@ def optimum(board_size = 9):
         for x in range(0, 11):
             for y in range(0,2):
                 if (y,x) in mpos_on_fruit and clicked_fruit != (x+y*11+1):
-                    base_surface.blit(fruits_dict_img_new_BIGer[(x+y*11+1)], (95+size_on_board*x,1035+(size_on_board+25)*y))
+                    base_surface.blit(fruits_dict_img_BIGer[(x+y*11+1)], (95+size_on_board*x,1035+(size_on_board+25)*y))
 
                     if click:
                         clicked_fruit = (x+y*11+1)
                 elif clicked_fruit != (x+y*11+1):
-                    base_surface.blit(fruits_dict_img_new[(x+y*11+1)], (95+size_on_board*x,1035+(size_on_board+25)*y))
+                    base_surface.blit(fruits_dict_img[(x+y*11+1)], (95+size_on_board*x,1035+(size_on_board+25)*y))
 
         if clicked_fruit:
-            base_surface.blit(fruits_dict_img_new[clicked_fruit], MENU_MOUSE_POS)
+            base_surface.blit(fruits_dict_img[clicked_fruit], (MENU_MOUSE_POS[0]-25,MENU_MOUSE_POS[1]-25))
         
         pos_in_board = get_square_index(MENU_MOUSE_POS[0],MENU_MOUSE_POS[1])
 
@@ -419,6 +474,13 @@ def optimum(board_size = 9):
                 click = False
             elif event.type == pygame.VIDEORESIZE:
                     screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if AKCEPT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    optimalization(board=board)
+                if RESET_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    board = np.zeros((board_size, board_size))
+                    clicked_fruit = None
 
 
         scaled_surface = pygame.transform.scale(base_surface, screen.get_size())
@@ -495,9 +557,6 @@ def menu():
 
         clock.tick(60)
         pygame.display.flip()
-
-
-
 
 if __name__ == "__main__":
     menu()
