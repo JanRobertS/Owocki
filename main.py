@@ -258,6 +258,9 @@ def optimalization(board):
     screen = pygame.display.set_mode((BASE_W, BASE_H))
     clock = pygame.time.Clock()
 
+    pygame.display.set_caption("Optymalization")
+
+
     running = True
     progress = 0.0
 
@@ -299,9 +302,8 @@ def optimum(board_size = 9):
 
     base_surface = pygame.Surface((BASE_W, BASE_H))
     screen = pygame.display.set_mode((BASE_W, BASE_H), pygame.RESIZABLE)
-
-
     clock = pygame.time.Clock()
+    pygame.display.set_caption("Algorytm")
 
     base_surface.fill("#1a88e2")
 
@@ -517,6 +519,111 @@ def optimum(board_size = 9):
         clock.tick(60)
         pygame.display.flip()
 
+def options():
+    BASE_W, BASE_H = 1024, 1024
+    font = pygame.font.Font("Czcionki\\ByteBounce.ttf", 40)
+
+
+    base_surface = pygame.Surface((BASE_W, BASE_H))
+    screen = pygame.display.set_mode((BASE_W, BASE_H), pygame.RESIZABLE)
+
+    image_board = pygame.image.load("Grafiki\\opcje.png").convert()
+    clock = pygame.time.Clock()
+    pygame.display.set_caption("OPTIONS")
+
+    button = pygame.image.load("Grafiki\\button.png").convert_alpha()
+    button = pygame.transform.scale(button, (button.get_width()/3 , button.get_height()/3))
+
+    RETURN_BUTTON = Button(image=button, pos=(525,880), text_input="RETURN",
+                        font=pygame.font.Font("Czcionki\\ByteBounce.ttf", size=100),
+                        base_color="#d7fcd4", hovering_color="White") 
+    
+
+    slider_x, slider_y = 300, 250   # pozycja paska
+    slider_width, slider_height = 300, 30
+
+    min_val = 1
+    max_val = 6
+    value = 2 
+
+    step_size = slider_width // (max_val - min_val)
+
+
+    def value_to_pos(val):
+        return slider_x + (val - min_val) * step_size
+
+    def pos_to_value(pos):
+        idx = round((pos - slider_x) / step_size)
+        return min_val + max(0, min(idx, max_val - min_val))
+
+    knob_x = value_to_pos(value)
+    dragging = False
+
+    
+    while True:
+        base_surface.blit(image_board, (0,0))
+
+        MENU_MOUSE_POS = pygame.mouse.get_pos()
+
+        for button in [RETURN_BUTTON]:
+            button.changeColor(MENU_MOUSE_POS)
+            button.update(base_surface)
+
+
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:   
+                pygame.quit()
+            elif event.type == pygame.VIDEORESIZE:
+                    screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                knob_rect = pygame.Rect(knob_x-10, slider_y-6, 20, slider_height+12)  # taki sam jak rysujesz knob
+                if knob_rect.collidepoint(event.pos):
+                    dragging = True
+
+                if RETURN_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    menu()
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if dragging:
+                    value = pos_to_value(knob_x)       # oblicz najbliższą wartość
+                    knob_x = value_to_pos(value)       # przesuń knob dokładnie na slot
+                dragging = False
+
+            elif event.type == pygame.MOUSEMOTION and dragging:
+                knob_x = max(slider_x, min(event.pos[0], slider_x + slider_width))
+                value = pos_to_value(knob_x)
+                knob_x = value_to_pos(value)       # przesuń knob dokładnie na slot
+
+        # Rysowanie
+        scaled_surface = pygame.transform.scale(base_surface, screen.get_size())
+        screen.blit(scaled_surface, (0, 0))
+
+        # --- slider rysujemy NA screenie ---
+        # w pętli rysowania zamiast okrągłego knoba:
+        # --- pixel-art pasek ---
+        pygame.draw.rect(screen, "#0b6405", (slider_x-2, slider_y-2, slider_width+4, slider_height+4))  # obramówka
+        pygame.draw.rect(screen, "#0D8F18", (slider_x, slider_y, slider_width, slider_height))       # wypełnienie
+
+        # podziałka (kratki pixel-artowe)
+        for i in range(min_val, max_val+1):
+            px = value_to_pos(i)
+            pygame.draw.rect(screen, "#0b6405", (px-2, slider_y-2, 4, slider_height+4))
+
+        # prostokątny knob
+        pygame.draw.rect(screen, "#108d07", (knob_x-10, slider_y-6, 21, slider_height+13))
+        pygame.draw.rect(screen, "#a5ff9e", (knob_x-10, slider_y-6, 20, slider_height+12))
+
+        # liczba obok
+        text = font.render(f"{value}", True, (255, 255, 255))
+        screen.blit(text, (knob_x-5, slider_y-40))
+
+        clock.tick(60)
+        pygame.display.flip()
+
+ 
+
 def menu():
     BASE_W, BASE_H = 1024, 1024
 
@@ -574,7 +681,7 @@ def menu():
                 if OPTIMUM_BUTTON.checkForInput(MENU_MOUSE_POS):
                     optimum()
                 if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    pass
+                    options()
                 if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
                     pygame.quit()
                     break
