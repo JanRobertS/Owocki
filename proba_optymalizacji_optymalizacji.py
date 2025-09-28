@@ -340,8 +340,6 @@ def process_board(_board, _resultat):
     return fruits, finished  # Zawsze tuple (lista, finished)
 
 
-
-
 def heurystyka(_board):
     # if len(self.cache) > 1_000_000:
     #     self.cache.clear()
@@ -349,17 +347,19 @@ def heurystyka(_board):
     # if h in self.cache:
     #     return self.cache[h]
     
-    w_alone = 20
+    w_alone = 8
     w_duble = 5
-    w_triple = 2
+    w_triple = 1
 
-    w_unique_fruits = 3
+    w_unique_fruits = 1/7
 
     _table_amount_neighbors = search_all_board_numba(_board)
 
     unique_fruits = len(np.unique(_board[_board > 0]))
 
-    _score = -w_alone* np.sum(_table_amount_neighbors == 1) -w_duble * np.sum(_table_amount_neighbors == 2)/2 -w_triple * np.sum(_table_amount_neighbors == 3)/3 + np.sum(_table_amount_neighbors > 3)/2 -w_unique_fruits * unique_fruits 
+    _score = -w_alone* np.sum(_table_amount_neighbors == 1) -w_duble * np.sum(_table_amount_neighbors == 2)/2 
+    -w_triple * np.sum(_table_amount_neighbors == 3)/3 + np.sum(_table_amount_neighbors > 3)/20 
+    -w_unique_fruits * unique_fruits 
     # self.cache[h] = fruit.score
 
     return _score
@@ -429,6 +429,9 @@ def find_optimal_worker(_board, _resultat, step, top, queue):
         # Liczymy oceny dla wszystkich plansz
         _tabel_score = _pool.map(score_board, [_b for _b, _ in _fruits])
         _tabel_score = np.array(_tabel_score)
+        a = len(_tabel_score)
+        if (top - a) > 0 :
+            top = len(_tabel_score)
         _top_index = np.argpartition(_tabel_score, -top)[-top:]
 
         # Zachowujemy tylko najlepsze plansze
