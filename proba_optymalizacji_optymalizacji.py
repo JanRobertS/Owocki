@@ -340,6 +340,28 @@ def process_board(_board, _resultat):
     return fruits, finished  # Zawsze tuple (lista, finished)
 
 
+def process_board_parm(_board, _resultat):
+    # print("Board:", _board ," resultat:",_resultat)
+
+    fruits = []
+    finished = False
+
+    moves = all_moves(_board)
+    for mo in moves:
+        _board_copy = np.copy(_board)
+        _resultat_copy = _resultat.copy()
+        _board_new, _finished, _resultat_copy = move(mo, _board_copy, _resultat_copy)
+
+        h = zlib.crc32(_board_new.tobytes())
+        if h not in visited:
+            fruits.append((_board_new, _resultat_copy))
+            visited[h] = True
+            if _finished:
+                finished = True
+                return _resultat_copy, finished  # Zawsze zwracamy listę
+
+    return fruits, finished  # Zawsze tuple (lista, finished)
+
 def heurystyka(_board):
     # if len(self.cache) > 1_000_000:
     #     self.cache.clear()
@@ -364,10 +386,41 @@ def heurystyka(_board):
 
     return _score
 
+def heurystyka_parm(_board, parm):
+    # if len(self.cache) > 1_000_000:
+    #     self.cache.clear()
+    # h = hash(fruit.board.tobytes())
+    # if h in self.cache:
+    #     return self.cache[h]
+
+
+    
+    w_alone = parm.get('w_alone', 8.0)
+    w_duble = parm.get('w_duble', 5.0)
+    w_triple = parm.get('w_triple', 1.0)
+
+    w_unique_fruits = parm.get('w_unique_fruits', (1/7))
+
+    _table_amount_neighbors = search_all_board_numba(_board)
+
+    unique_fruits = len(np.unique(_board[_board > 0]))
+
+    _score = -w_alone* np.sum(_table_amount_neighbors == 1) -w_duble * np.sum(_table_amount_neighbors == 2)/2 
+    -w_triple * np.sum(_table_amount_neighbors == 3)/3 + np.sum(_table_amount_neighbors > 3)/20 
+    -w_unique_fruits * unique_fruits 
+    # self.cache[h] = fruit.score
+
+    return _score
+
+
 
 
 def score_board(_board):
     score = heurystyka(_board)
+    return score
+
+def score_board_parm(_board, parm):
+    score = heurystyka_parm(_board, parm)
     return score
 
 
@@ -442,6 +495,64 @@ def find_optimal_worker(_board, _resultat, step, top, queue):
         _i += 1
 
 
+def find_optimal_parm(_board, _resultat, parm, step: int = 5, top: int = 5):
+    _fruits = [(_board, _resultat)]
+    _i = 0
+    _j = 0
+
+    _pool = mp.Pool(processes=mp.cpu_count())
+    finished = False
+
+    while not finished:
+        # if _i > 9:
+        #     _j = 2 
+        # elif _i > 5:
+        #     _j = 1
+
+        if _i > 5:
+            _j = 1 
+
+        # Rozwijamy wszystkie możliwe plansze przez kilka kroków
+        for _ in range(step + _j):
+            res_list = _pool.starmap(process_board_parm, [(_b, _r) for _b, _r in _fruits])
+
+            # if _i < 2:
+            #     print(res_list)
+                
+            _fruits2 = []
+            finished = False
+
+            for fruits_chunk, _finished in res_list:
+                if _finished:
+                    finished = True
+                    return len(fruits_chunk)  # gotowe rozwiązanie
+                _fruits2.extend(fruits_chunk)
+
+            _fruits = _fruits2
+
+
+        # Liczymy oceny dla wszystkich plansz
+        _tabel_score = _pool.starmap(score_board_parm, [(_b, parm) for _b, _ in _fruits])
+
+        _tabel_score = np.array(_tabel_score)
+
+        a = len(_tabel_score)
+        if (top - a) > 0 :
+            top = len(_tabel_score)
+
+        _top5_index = np.argpartition(_tabel_score, -top)[-top:]
+
+        # Zachowujemy tylko najlepsze plansze
+        _fruits = [_fruits[_idx] for _idx in _top5_index]
+
+        _i += 1
+
+
+
+
+    
+    
+
 def find_optimal(_board, _resultat, step: int = 5, top: int = 5):
     _fruits = [(_board, _resultat)]
     _i = 0
@@ -494,4 +605,4 @@ def find_optimal(_board, _resultat, step: int = 5, top: int = 5):
         _i += 1
 
 
-    
+
