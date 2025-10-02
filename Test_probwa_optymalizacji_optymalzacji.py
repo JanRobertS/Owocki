@@ -135,7 +135,7 @@ if __name__ == "__main__":
     maxiter = 200
 
     # spróbuj wczytać top K z logu i zbudować init
-    TOP_K = min(15, popsize)  # weź 5 najlepszych (albo mniej gdy popsize mały)
+    TOP_K = min(5, popsize)  # weź 5 najlepszych (albo mniej gdy popsize mały)
     topk = load_top_k_from_log(TOP_K, SAVE_LOG)
     if topk:
         init_pop = build_init_from_topk(topk, bounds, popsize)
