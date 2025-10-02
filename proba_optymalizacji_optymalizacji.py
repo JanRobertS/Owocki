@@ -500,7 +500,7 @@ def find_optimal_parm(_board, _resultat, parm, step: int = 5, top: int = 5):
     _i = 0
     _j = 0
 
-    _pool = mp.Pool(processes=mp.cpu_count())
+    _pool = mp.Pool(processes=mp.cpu_count()-4)
     finished = False
 
     while not finished:
